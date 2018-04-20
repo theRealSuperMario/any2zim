@@ -31,8 +31,7 @@ Syntax converted:
     ----------------------------------------------------
     inline link      [link](url)        [[url|link]]
     ----------------------------------------------------
-    ref link         [link text](url)    
-                                        [[url|link]]
+    ref link         [link text](url)   [[url|link]]
     ----------------------------------------------------
     image            ![img](url)        {{url}}
     ----------------------------------------------------
@@ -42,14 +41,14 @@ Syntax converted:
 Syntax not supported:
     - footnote
     - tables
-                     
+
 
 Update time: 2016-03-21 21:17:19.
 """
 
 
 import re
-import sys,os
+import sys, os
 import argparse
 from lib import tools
 try:
@@ -92,12 +91,12 @@ g_escape_table = dict([(ch, _hash_text(ch))
 _home_re=re.compile('^(~)(.+)$')
 
 def _home_re_sub(match):
-    return os.path.expanduser(match.group(1))+match.group(2)
+    return os.path.expanduser(match.group(1)) + match.group(2)
 
 def findBaseDir(curdir):
     target_file='notebook.zim'
 
-    if os.path.exists(os.path.join(curdir,target_file)):
+    if os.path.exists(os.path.join(curdir, target_file)):
         return curdir
     else:
         return findBaseDir(os.path.split(curdir)[0])
@@ -105,19 +104,19 @@ def findBaseDir(curdir):
 def parseLink(link_text, dec, file_path):
 
     if file_path is None:
-        return '%s%s' %(dec, link_text)
+        return '%s%s' % (dec, link_text)
 
-    file_path=_home_re.sub(_home_re_sub,file_path)
-    curdir, curfile=os.path.split(file_path)
-    link_file='%s.txt' %link_text
+    file_path = _home_re.sub(_home_re_sub, file_path)
+    curdir, curfile = os.path.split(file_path)
+    link_file = '%s.txt' % link_text
 
-    if dec=='':
-        result=os.path.join(curdir,link_file)
+    if dec == '':
+        result=os.path.join(curdir, link_file)
         if os.path.exists(result):
             return result
         else:
             parentdir=os.path.split(curdir)[0]
-            result=os.path.join(parentdir,link_file)
+            result=os.path.join(parentdir, link_file)
             if os.path.exists(result):
                 return result
             else:
@@ -125,19 +124,19 @@ def parseLink(link_text, dec, file_path):
 
     elif dec==':':
         basedir=findBaseDir(curdir)
-        result=os.path.join(basedir,link_file)
+        result=os.path.join(basedir, link_file)
         if os.path.exists(result):
             return result
         else:
-            return '%s%s' %(dec,link_text)
+            return '%s%s' %(dec, link_text)
 
-    elif dec=='+':
-        subdir=os.path.join(curdir,os.path.splitext(curfile)[0])
-        result=os.path.join(subdir,link_file)
+    elif dec == '+':
+        subdir = os.path.join(curdir, os.path.splitext(curfile)[0])
+        result = os.path.join(subdir, link_file)
         if os.path.isdir(subdir) and os.path.exists(result):
             return result
         else:
-            return '%s%s' %(dec,link_text)
+            return '%s%s' % (dec, link_text)
 
 
 
@@ -364,6 +363,8 @@ class Zim2Markdown(object):
         text = self._do_code_blocks(text)
 
         text = self._do_block_quotes(text)
+
+        text = self._do_code(text)
 
         # We already ran _HashHTMLBlocks() before, in Markdown(), but that
         # was to escape raw HTML in the original Markdown source. This time,
@@ -794,15 +795,15 @@ class Zim2Markdown(object):
 
     def _code_span_sub(self, match):
         c = match.group(2).strip(" \t")
-        #c = self._encode_code(c)
+        # c = self._encode_code(c)
 
         ########## syntax: code block ##############
         #return "<code>%s</code>" % c
-        codesym=match.group(1)
-        if codesym=='```':
-            return "%s\n%s\n%s" % (codesym,c,codesym)
-        elif codesym=='`':
-            return "%s%s%s" % (codesym,c,codesym)
+        codesym = match.group(1)
+        if codesym == '```':
+            return "%s\n%s\n%s" % (codesym, c, codesym)
+        elif codesym == '`':
+            return "%s%s%s" % (codesym, c, codesym)
         ########## syntax: code block END ##############
 
     def _do_code_spans(self, text):
@@ -857,7 +858,6 @@ class Zim2Markdown(object):
     _strong_re = re.compile(r"(\*\*|__)(?=\S)(.+?[*_]*)(?<=\S)\1", re.S)
     _em_re = re.compile(r"(//)(?=\S)(.+?)(?<=\S)\1", re.S)
 
-
     def _do_italics_and_bold(self, text):
         # <strong> must go first:
         ########## syntax: italic and bold ##############
@@ -865,8 +865,6 @@ class Zim2Markdown(object):
         text = self._em_re.sub(r"*\2*", text)
         ########## syntax: italic and bold END ##############
         return text
-
-
 
     _block_quote_base = r"""
         (                           # Wrap whole match in \1
@@ -903,14 +901,39 @@ class Zim2Markdown(object):
 
         return '> %s\n\n' % bq
 
-
-
-
-
     def _do_block_quotes(self, text):
         if "'''" not in text:
             return text
         return self._block_quote_re.sub(self._block_quote_sub, text)
+
+    _block_code_base_re = re.compile(r"""
+       (
+            ^{{{code:\s*(lang="(\w+)")?\s*(linenumbers="(True|False)")?[\n]?     # \2 lang="sh"  \3 "sh"  \4 linenumbers="True"  \5 True
+            (
+                (\n|(.+\n))*?                                                    # \6 all inner code
+            )
+            ^}}}
+       )
+    """, re.M | re.X)
+
+    def _code_sub(self, match):
+        code = match.group(6)
+        lang = match.group(3)
+
+        # redmine Default code highlightment relies on CodeRay, a fast syntax highlighting library written completely in Ruby. It currently supports
+        # c, cpp, css, delphi, groovy, html, java, javascript, json, php, python, rhtml, ruby, scheme, sql, xml and yaml languages.
+
+        code_map = {
+          "sh": '',
+        }
+
+        return '<pre><code class="%(lang)s">%(code)s</code></pre>' % dict(lang=lang, code=code_map.get(code, code))
+
+    def _do_code(self, text):
+        if '{{{code' not in text:
+            return text
+        return self._block_code_base_re.sub(self._code_sub, text)
+
 
     def _form_paragraphs(self, text):
         # Strip leading and trailing lines:
@@ -1022,7 +1045,7 @@ def _dedentlines(lines, tabsize=8, skip_first_line=False):
             elif ch == '\t':
                 indent += tabsize - (indent % tabsize)
             elif ch in '\r\n':
-                continue # skip all-whitespace lines
+                continue  # skip all-whitespace lines
             else:
                 break
         else:
@@ -1066,43 +1089,36 @@ def _dedentlines(lines, tabsize=8, skip_first_line=False):
     return lines
 
 
+def main(filein, fileout, verbose=True):
 
-        
-        
-
-
-
-def main(filein,fileout,verbose=True):
-
-    text=tools.readFile(filein,verbose)
+    text=tools.readFile(filein, verbose)
     if verbose:
         print('# <markdown2zim>: Converting to zim...')
     newtext=Zim2Markdown(file=filein).convert(text)
-    tools.saveFile(fileout,newtext,verbose)
+    tools.saveFile(fileout, newtext, verbose)
 
     return
 
 
-
 #-----------------------Main-----------------------
-if __name__=='__main__':
+if __name__ == '__main__':
 
 
-    parser=argparse.ArgumentParser(description=\
+    parser = argparse.ArgumentParser(description=\
             'Convert zim wiki note files to markdown syntax.')
 
-    parser.add_argument('file',type=str,\
+    parser.add_argument('file', type=str, \
             help='Input zim note text file.')
-    parser.add_argument('-o','--out',type=str,\
+    parser.add_argument('-o', '--out', type=str, \
             help='Output file name.')
-    parser.add_argument('-v','--verbose',action='store_true',\
+    parser.add_argument('-v', '--verbose', action='store_true', \
             default=True)
 
     try:
         args=parser.parse_args()
     except:
         sys.exit(1)
-    
+
     FILEIN=os.path.abspath(args.file)
     if not args.out:
         FILEOUT='%s_%s.md' %(os.path.splitext(args.file)[0], 'zim2md')
@@ -1110,6 +1126,6 @@ if __name__=='__main__':
         FILEOUT=args.out
     FILEOUT=os.path.abspath(FILEOUT)
 
-    main(FILEIN,FILEOUT,args.verbose)
+    main(FILEIN, FILEOUT, args.verbose)
 
-    
+
