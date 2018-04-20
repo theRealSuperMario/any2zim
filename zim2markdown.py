@@ -48,7 +48,8 @@ Update time: 2016-03-21 21:17:19.
 
 
 import re
-import sys, os
+import sys
+import os
 import argparse
 from lib import tools
 try:
@@ -71,7 +72,6 @@ elif sys.version_info[0] >= 3:
     base_string_type = str
 
 
-
 #---- globals
 DEBUG = False
 
@@ -79,27 +79,34 @@ DEFAULT_TAB_WIDTH = 4
 
 
 SECRET_SALT = bytes(randint(0, 1000000))
+
+
 def _hash_text(s):
     return 'md5-' + md5(SECRET_SALT + s.encode("utf-8")).hexdigest()
 
 
+g_escape_table = dict(
+    [
+        (ch, _hash_text(ch)) for ch in '\\`*_{}[]()>#+-.!'
+    ]
+)
 
-g_escape_table = dict([(ch, _hash_text(ch))
-    for ch in '\\`*_{}[]()>#+-.!'])
 
+_home_re = re.compile('^(~)(.+)$')
 
-_home_re=re.compile('^(~)(.+)$')
 
 def _home_re_sub(match):
     return os.path.expanduser(match.group(1)) + match.group(2)
 
+
 def findBaseDir(curdir):
-    target_file='notebook.zim'
+    target_file = 'notebook.zim'
 
     if os.path.exists(os.path.join(curdir, target_file)):
         return curdir
     else:
         return findBaseDir(os.path.split(curdir)[0])
+
 
 def parseLink(link_text, dec, file_path):
 
@@ -111,24 +118,24 @@ def parseLink(link_text, dec, file_path):
     link_file = '%s.txt' % link_text
 
     if dec == '':
-        result=os.path.join(curdir, link_file)
+        result = os.path.join(curdir, link_file)
         if os.path.exists(result):
             return result
         else:
-            parentdir=os.path.split(curdir)[0]
-            result=os.path.join(parentdir, link_file)
+            parentdir = os.path.split(curdir)[0]
+            result = os.path.join(parentdir, link_file)
             if os.path.exists(result):
                 return result
             else:
                 return link_text
 
-    elif dec==':':
-        basedir=findBaseDir(curdir)
-        result=os.path.join(basedir, link_file)
+    elif dec == ':':
+        basedir = findBaseDir(curdir)
+        result = os.path.join(basedir, link_file)
         if os.path.exists(result):
             return result
         else:
-            return '%s%s' %(dec, link_text)
+            return '%s%s' % (dec, link_text)
 
     elif dec == '+':
         subdir = os.path.join(curdir, os.path.splitext(curfile)[0])
@@ -137,7 +144,6 @@ def parseLink(link_text, dec, file_path):
             return result
         else:
             return '%s%s' % (dec, link_text)
-
 
 
 class Zim2Markdown(object):
@@ -153,7 +159,7 @@ class Zim2Markdown(object):
     def __init__(self, html4tags=False, tab_width=4, file=None):
 
         self.tab_width = tab_width
-        self.file=file
+        self.file = file
         self._outdent_re = re.compile(r'^(\t|[ ]{1,%d})' % tab_width, re.M)
         self._escape_table = g_escape_table.copy()
 
@@ -163,7 +169,6 @@ class Zim2Markdown(object):
         self.list_level = 0
         self.footnotes = {}
         self.footnote_ids = []
-
 
     def convert(self, text):
         """Convert the given text."""
@@ -214,9 +219,8 @@ class Zim2Markdown(object):
 
         return text
 
-
-
     _detab_re = re.compile(r'(.*?)\t', re.M)
+
     def _detab_sub(self, match):
         g1 = match.group(1)
         return g1 + (' ' * (self.tab_width - len(g1) % self.tab_width))
@@ -239,8 +243,6 @@ class Zim2Markdown(object):
         if '\t' not in text:
             return text
         return self._detab_re.subn(self._detab_sub, text)[0]
-
-
 
     def _strip_link_definitions(self, text):
         # Strips link definitions from text, stores the URLs and titles in
@@ -289,9 +291,6 @@ class Zim2Markdown(object):
         text = self._naked_gt_re.sub('&gt;', text)
         return text
 
-
-
-
     def _extract_link_def_sub(self, match):
         id, url, title = match.groups()
         key = id.lower()    # Link IDs are case-insensitive
@@ -299,7 +298,6 @@ class Zim2Markdown(object):
         if title:
             self.titles[key] = title
         return ""
-
 
     def _extract_footnote_def_sub(self, match):
         id, text = match.groups()
@@ -343,7 +341,6 @@ class Zim2Markdown(object):
             re.X | re.M)
         return footnote_def_re.sub(self._extract_footnote_def_sub, text)
 
-
     def _run_block_gamut(self, text):
         # These are all the transformations that form block-level
         # tags like paragraphs, headers, and list items.
@@ -376,11 +373,6 @@ class Zim2Markdown(object):
 
         return text
 
-
-
-
-
-
     def _run_span_gamut(self, text):
         # These are all the transformations that occur *within* block-level
         # tags like paragraphs, headers, and list items.
@@ -394,8 +386,6 @@ class Zim2Markdown(object):
         text = self._do_italics_and_bold(text)
 
         return text
-
-
 
     _inline_link_title = re.compile(r'''
             (                   # \1
@@ -445,13 +435,13 @@ class Zim2Markdown(object):
     def _extract_url_and_title(self, text, start):
         """Extracts the url and (optional) title from the tail of a link"""
         # text[start] equals the opening parenthesis
-        idx = self._find_non_whitespace(text, start+1)
+        idx = self._find_non_whitespace(text, start + 1)
         if idx == len(text):
             return None, None, None
         end_idx = idx
         has_anglebrackets = text[idx] == "<"
         if has_anglebrackets:
-            end_idx = self._find_balanced(text, end_idx+1, "<", ">")
+            end_idx = self._find_balanced(text, end_idx + 1, "<", ">")
         end_idx = self._find_balanced(text, end_idx, "(", ")")
         match = self._inline_link_title.search(text, idx, end_idx)
         if not match:
@@ -460,9 +450,6 @@ class Zim2Markdown(object):
         if has_anglebrackets:
             url = self._strip_anglebrackets.sub(r'\1', url)
         return url, title, end_idx
-
-
-
 
     def _do_links(self, text):
         """Turn Markdown link shortcuts into XHTML <a> and <img> tags.
@@ -481,7 +468,7 @@ class Zim2Markdown(object):
         anchor_allowed_pos = 0
 
         curr_pos = 0
-        while True: # Handle the next link.
+        while True:  # Handle the next link.
             # The next '[' is the start of:
             # - an inline anchor:   [text](url "title")
             # - a reference anchor: [text][id]
@@ -500,10 +487,10 @@ class Zim2Markdown(object):
             try:
                 try:
                     start_idx = text.index('[[', curr_pos)
-                    is_img=False
+                    is_img = False
                 except:
                     start_idx = text.index('{{', curr_pos)
-                    is_img=True
+                    is_img = True
             except ValueError:
                 break
 
@@ -511,9 +498,9 @@ class Zim2Markdown(object):
 
             # Find the matching closing ']]' or '}}'.
             bracket_depth = 0
-            for p in range(start_idx+1, min(start_idx+MAX_LINK_TEXT_SENTINEL,
-                                            text_length)):
-                ch = text[p:p+2]
+            for p in range(start_idx + 1, min(start_idx + MAX_LINK_TEXT_SENTINEL,
+                                              text_length)):
+                ch = text[p:p + 2]
                 if ch in [']]', '}}']:
                     bracket_depth -= 1
                     if bracket_depth < 0:
@@ -525,7 +512,7 @@ class Zim2Markdown(object):
                 # This isn't markup.
                 curr_pos = start_idx + 1
                 continue
-            link_text = text[start_idx+2:p]
+            link_text = text[start_idx + 2:p]
 
             # Now determine what this is by the remainder.
             p += 1
@@ -537,33 +524,31 @@ class Zim2Markdown(object):
                 ########## syntax: link ##############
                 result_head = '![%s]' % link_text
                 result = '%s(%s)' % (result_head, link_text)
-                text = text[:start_idx] + result + text[p+1:]
+                text = text[:start_idx] + result + text[p + 1:]
                 ########## syntax: link END ##############
 
             elif start_idx >= anchor_allowed_pos:
 
                 if '|' in link_text:
-                    link_re=re.compile('(.+)\\|(.+)',re.X | re.M)
+                    link_re = re.compile('(.+)\\|(.+)', re.X | re.M)
                 else:
-                    link_re=re.compile('(:|\\+|\\b)(.+)',re.X | re.M)
+                    link_re = re.compile('(:|\\+|\\b)(.+)', re.X | re.M)
 
-                m1=link_re.match(link_text)
-                url,link=m1.groups()
+                m1 = link_re.match(link_text)
+                url, link = m1.groups()
 
                 ########## syntax: link ##############
                 result_head = '[%s]' % link
-                url=parseLink(link, url, self.file)
+                url = parseLink(link, url, self.file)
                 result = '%s(%s)' % (result_head, url)
-                text = text[:start_idx] + result + text[p+1:]
+                text = text[:start_idx] + result + text[p + 1:]
                 ########## syntax: link END ##############
             else:
                 # Anchor not allowed here.
                 curr_pos = start_idx + 1
             continue
 
-
         return text
-
 
     _h_re_base = r'''
         ^(\={1,6})  # \1 = string of ='s
@@ -577,10 +562,9 @@ class Zim2Markdown(object):
 
     def _h_sub(self, match):
         n = len(match.group(1))
-        n = max(1,6-n)
-        text=match.group(2)
-        return "%s %s\n\n" % (n*'#', text)
-
+        n = max(1, 6 - n)
+        text = match.group(2)
+        return "%s %s\n\n" % (n * '#', text)
 
     def _do_headers(self, text):
         # Setext-style headers:
@@ -599,7 +583,7 @@ class Zim2Markdown(object):
 
         return self._h_re.sub(self._h_sub, text)
 
-    _marker_ul_chars  = '*+-'
+    _marker_ul_chars = '*+-'
     _marker_any = r'(?:[%s]|\d+\.)' % _marker_ul_chars
     _marker_ul = '(?:[%s])' % _marker_ul_chars
     _marker_ol = r'(?:\d+\.)'
@@ -650,9 +634,9 @@ class Zim2Markdown(object):
                     )
                 ''' % (less_than_tab, marker_pat, marker_pat)
                 if self.list_level:  # sub-list
-                    list_re = re.compile("^"+whole_list, re.X | re.M | re.S)
+                    list_re = re.compile("^" + whole_list, re.X | re.M | re.S)
                 else:
-                    list_re = re.compile(r"(?:(?<=\n\n)|\A\n?)"+whole_list,
+                    list_re = re.compile(r"(?:(?<=\n\n)|\A\n?)" + whole_list,
                                          re.X | re.M | re.S)
                 match = list_re.search(text, pos)
                 if match:
@@ -664,7 +648,7 @@ class Zim2Markdown(object):
             start, end = match.span()
             middle = self._list_sub(match)
             text = text[:start] + middle + text[end:]
-            pos = start + len(middle) # start pos for next attempted match
+            pos = start + len(middle)  # start pos for next attempted match
 
         return text
 
@@ -694,13 +678,11 @@ class Zim2Markdown(object):
         self._last_li_endswith_two_eols = (len(match.group(5)) == 2)
 
         ########## syntax: list item (unordered) ##############
-        bul=match.group(3)
+        bul = match.group(3)
         if bul in self._marker_ul_chars:
-            bul=u'*'
-        return "%s %s\n" % (bul,item)
+            bul = u'*'
+        return "%s %s\n" % (bul, item)
         ########## syntax: list item (unordered) END ##############
-
-
 
     def _process_list_items(self, list_str):
         # Process the contents of a single ordered or unordered list,
@@ -733,8 +715,6 @@ class Zim2Markdown(object):
         self.list_level -= 1
         return list_str
 
-
-
     def _code_block_sub(self, match, is_fenced_code_block=False):
         if is_fenced_code_block:
             codeblock = match.group(2)
@@ -748,9 +728,6 @@ class Zim2Markdown(object):
 
         return "\n\n```%s\n```\n\n" % codeblock
 
-
-
-
     def _do_code_blocks(self, text):
         return text
 
@@ -762,7 +739,7 @@ class Zim2Markdown(object):
         ''', re.M | re.X | re.S)
 
     def _fenced_code_block_sub(self, match):
-        return self._code_block_sub(match, is_fenced_code_block=True);
+        return self._code_block_sub(match, is_fenced_code_block=True)
 
     def _do_fenced_code_blocks(self, text):
         """Process ```-fenced unindented code blocks ('fenced-code-blocks' extra)."""
@@ -798,7 +775,7 @@ class Zim2Markdown(object):
         # c = self._encode_code(c)
 
         ########## syntax: code block ##############
-        #return "<code>%s</code>" % c
+        # return "<code>%s</code>" % c
         codesym = match.group(1)
         if codesym == '```':
             return "%s\n%s\n%s" % (codesym, c, codesym)
@@ -851,6 +828,7 @@ class Zim2Markdown(object):
         return hashed
 
     _strike_re = re.compile(r"~~(?=\S)(.+?)(?<=\S)~~", re.S)
+
     def _do_strike(self, text):
         text = self._strike_re.sub(r"~~\1~~", text)
         return text
@@ -878,14 +856,13 @@ class Zim2Markdown(object):
     """
 
     _block_quote_re = re.compile(_block_quote_base, re.M | re.X)
-    _bq_one_level_re = re.compile('^[ \t]*>[ \t]?', re.M);
-    _bq_one_level_re_spoiler = re.compile('^[ \t]*>[ \t]*?![ \t]?', re.M);
+    _bq_one_level_re = re.compile('^[ \t]*>[ \t]?', re.M)
+    _bq_one_level_re_spoiler = re.compile('^[ \t]*>[ \t]*?![ \t]?', re.M)
     _bq_all_lines_spoilers = re.compile(r'\A(?:^[ \t]*>[ \t]*?!.*[\n\r]*)+\Z', re.M)
     _html_pre_block_re = re.compile(r'(\s*.+?)', re.S)
+
     def _dedent_two_spaces_sub(self, match):
         return re.sub(r'(?m)^  ', '', match.group(1))
-
-
 
     def _block_quote_sub(self, match):
         bq = match.group(2)
@@ -924,7 +901,7 @@ class Zim2Markdown(object):
         # c, cpp, css, delphi, groovy, html, java, javascript, json, php, python, rhtml, ruby, scheme, sql, xml and yaml languages.
 
         code_map = {
-          "sh": '',
+            "sh": '',
         }
 
         return '<pre><code class="%(lang)s">%(code)s</code></pre>' % dict(lang=lang, code=code_map.get(code, code))
@@ -933,7 +910,6 @@ class Zim2Markdown(object):
         if '{{{code' not in text:
             return text
         return self._block_code_base_re.sub(self._code_sub, text)
-
 
     def _form_paragraphs(self, text):
         # Strip leading and trailing lines:
@@ -946,9 +922,6 @@ class Zim2Markdown(object):
             grafs.append(graf.lstrip(" \t"))
 
         return "\n\n".join(grafs)
-
-
-
 
     def _add_footnotes(self, text):
         if self.footnotes:
@@ -963,9 +936,9 @@ class Zim2Markdown(object):
                 footer.append('<li id="fn-%s">' % id)
                 footer.append(self._run_block_gamut(self.footnotes[id]))
                 backlink = ('<a href="#fnref-%s" '
-                    'class="footnoteBackLink" '
-                    'title="Jump back to footnote %d in the text.">'
-                    '&#8617;</a>' % (id, i+1))
+                            'class="footnoteBackLink" '
+                            'title="Jump back to footnote %d in the text.">'
+                            '&#8617;</a>' % (id, i + 1))
                 if footer[-1].endswith("</p>"):
                     footer[-1] = footer[-1][:-len("</p>")] \
                         + '&#160;' + backlink + "</p>"
@@ -978,14 +951,10 @@ class Zim2Markdown(object):
         else:
             return text
 
-
-
     def _outdent(self, text):
         # Remove one level of line-leading tabs or spaces
         return text
-        #return self._outdent_re.sub('', text)
-
-
+        # return self._outdent_re.sub('', text)
 
 
 def _dedent(text, tabsize=8, skip_first_line=False):
@@ -1003,6 +972,7 @@ def _dedent(text, tabsize=8, skip_first_line=False):
     _dedentlines(lines, tabsize=tabsize, skip_first_line=skip_first_line)
     return ''.join(lines)
 
+
 def _xml_escape_attr(attr, skip_single_quote=True):
     """Escape the given string for use in an HTML/XML tag attribute.
 
@@ -1010,10 +980,10 @@ def _xml_escape_attr(attr, skip_single_quote=True):
     the tag attribute is surrounded by double quotes.
     """
     escaped = (attr
-        .replace('&', '&amp;')
-        .replace('"', '&quot;')
-        .replace('<', '&lt;')
-        .replace('>', '&gt;'))
+               .replace('&', '&amp;')
+               .replace('"', '&quot;')
+               .replace('<', '&lt;')
+               .replace('>', '&gt;'))
     if not skip_single_quote:
         escaped = escaped.replace("'", "&#39;")
     return escaped
@@ -1033,11 +1003,12 @@ def _dedentlines(lines, tabsize=8, skip_first_line=False):
     """
     DEBUG = False
     if DEBUG:
-        print("dedent: dedent(..., tabsize=%d, skip_first_line=%r)"\
+        print("dedent: dedent(..., tabsize=%d, skip_first_line=%r)"
               % (tabsize, skip_first_line))
     margin = None
     for i, line in enumerate(lines):
-        if i == 0 and skip_first_line: continue
+        if i == 0 and skip_first_line:
+            continue
         indent = 0
         for ch in line:
             if ch == ' ':
@@ -1049,17 +1020,20 @@ def _dedentlines(lines, tabsize=8, skip_first_line=False):
             else:
                 break
         else:
-            continue # skip all-whitespace lines
-        if DEBUG: print("dedent: indent=%d: %r" % (indent, line))
+            continue  # skip all-whitespace lines
+        if DEBUG:
+            print("dedent: indent=%d: %r" % (indent, line))
         if margin is None:
             margin = indent
         else:
             margin = min(margin, indent)
-    if DEBUG: print("dedent: margin=%r" % margin)
+    if DEBUG:
+        print("dedent: margin=%r" % margin)
 
     if margin is not None and margin > 0:
         for i, line in enumerate(lines):
-            if i == 0 and skip_first_line: continue
+            if i == 0 and skip_first_line:
+                continue
             removed = 0
             for j, ch in enumerate(line):
                 if ch == ' ':
@@ -1067,7 +1041,8 @@ def _dedentlines(lines, tabsize=8, skip_first_line=False):
                 elif ch == '\t':
                     removed += tabsize - (removed % tabsize)
                 elif ch in '\r\n':
-                    if DEBUG: print("dedent: %r: EOL -> strip up to EOL" % line)
+                    if DEBUG:
+                        print("dedent: %r: EOL -> strip up to EOL" % line)
                     lines[i] = lines[i][j:]
                     break
                 else:
@@ -1075,13 +1050,13 @@ def _dedentlines(lines, tabsize=8, skip_first_line=False):
                                      "line %r while removing %d-space margin"
                                      % (ch, line, margin))
                 if DEBUG:
-                    print("dedent: %r: %r -> removed %d/%d"\
+                    print("dedent: %r: %r -> removed %d/%d"
                           % (line, ch, removed, margin))
                 if removed == margin:
-                    lines[i] = lines[i][j+1:]
+                    lines[i] = lines[i][j + 1:]
                     break
                 elif removed > margin:
-                    lines[i] = ' '*(removed-margin) + lines[i][j+1:]
+                    lines[i] = ' ' * (removed - margin) + lines[i][j + 1:]
                     break
             else:
                 if removed:
@@ -1091,10 +1066,10 @@ def _dedentlines(lines, tabsize=8, skip_first_line=False):
 
 def main(filein, fileout, verbose=True):
 
-    text=tools.readFile(filein, verbose)
+    text = tools.readFile(filein, verbose)
     if verbose:
         print('# <markdown2zim>: Converting to zim...')
-    newtext=Zim2Markdown(file=filein).convert(text)
+    newtext = Zim2Markdown(file=filein).convert(text)
     tools.saveFile(fileout, newtext, verbose)
 
     return
@@ -1103,29 +1078,25 @@ def main(filein, fileout, verbose=True):
 #-----------------------Main-----------------------
 if __name__ == '__main__':
 
+    parser = argparse.ArgumentParser(description='Convert zim wiki note files to markdown syntax.')
 
-    parser = argparse.ArgumentParser(description=\
-            'Convert zim wiki note files to markdown syntax.')
-
-    parser.add_argument('file', type=str, \
-            help='Input zim note text file.')
-    parser.add_argument('-o', '--out', type=str, \
-            help='Output file name.')
-    parser.add_argument('-v', '--verbose', action='store_true', \
-            default=True)
+    parser.add_argument('file', type=str,
+                        help='Input zim note text file.')
+    parser.add_argument('-o', '--out', type=str,
+                        help='Output file name.')
+    parser.add_argument('-v', '--verbose', action='store_true',
+                        default=True)
 
     try:
-        args=parser.parse_args()
+        args = parser.parse_args()
     except:
         sys.exit(1)
 
-    FILEIN=os.path.abspath(args.file)
+    FILEIN = os.path.abspath(args.file)
     if not args.out:
-        FILEOUT='%s_%s.md' %(os.path.splitext(args.file)[0], 'zim2md')
+        FILEOUT = '%s_%s.md' % (os.path.splitext(args.file)[0], 'zim2md')
     else:
-        FILEOUT=args.out
-    FILEOUT=os.path.abspath(FILEOUT)
+        FILEOUT = args.out
+    FILEOUT = os.path.abspath(FILEOUT)
 
     main(FILEIN, FILEOUT, args.verbose)
-
-
