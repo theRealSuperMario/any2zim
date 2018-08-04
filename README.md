@@ -31,9 +31,9 @@ Convert a text file written in **markdown** or **zim wiki** to the other.
     quote            > texts...         '''
                      texts...           texts...
                                         '''
-    code             ```                ```
+    code             ```                {{{code: lang="python" linenumbers="True"'''
                      texts...           texts...
-                     ```                ```
+                     ```                }}}
     ----------------------------------------------------
     inline link      [link](url)        [[url|link]]
     ----------------------------------------------------
@@ -46,6 +46,9 @@ Convert a text file written in **markdown** or **zim wiki** to the other.
                      [id]:url "title"   {{url}}
 ```
 
+## Nots about code blocks
+
+* for now all codeblocks are python
 
 
 Links in **zim** are translated to file paths, e.g. `[[+linktonote]]` is converted

@@ -28,9 +28,9 @@ Syntax converted:
     quote            >                  '''
                      texts...           texts...
                                         '''
-    code             ```                ```
+    code             ```                {{{code: lang="python" linenumbers="True"'''
                      texts...           texts...
-                     ```                ```
+                     ```                }}}
     ----------------------------------------------------
     inline link      [link](url)        [[url|link]]
     ----------------------------------------------------
